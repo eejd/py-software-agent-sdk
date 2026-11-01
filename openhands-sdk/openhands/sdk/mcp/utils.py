@@ -6,7 +6,7 @@ import logging
 from collections.abc import Callable, Mapping, Sequence
 from typing import Protocol
 
-import httpx
+import httpx2 as httpx
 import mcp.types
 from fastmcp.client.auth import OAuth
 from fastmcp.client.logging import LogMessage

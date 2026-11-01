@@ -7,7 +7,7 @@ from contextlib import aclosing
 from typing import Any, Literal
 from urllib.parse import parse_qsl
 
-import httpx
+import httpx2 as httpx
 from fastmcp.client.auth import OAuth
 from mcp.client.auth.utils import (
     build_oauth_authorization_server_metadata_discovery_urls,
@@ -126,14 +126,10 @@ class MCPOAuth(OAuth):
         )
 
     async def _exchange_token_authorization_code(
-        self,
-        auth_code: str,
-        code_verifier: str,
-        *,
-        token_data: dict[str, Any] | None = None,
+        self, auth_code: str, code_verifier: str
     ) -> httpx.Request:
         request = await super()._exchange_token_authorization_code(
-            auth_code, code_verifier, token_data=token_data
+            auth_code, code_verifier
         )
         return _without_client_id_when_basic(request)
 
