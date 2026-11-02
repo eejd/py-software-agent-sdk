@@ -148,6 +148,11 @@ def _normalized_supported_openai_params(
     normalized = _normalize_model_for_litellm(model)
     if not normalized:
         return frozenset()
+    # LiteLLM's provider-prefixed OpenAI lookup returns a provider-wide
+    # parameter set, including reasoning for non-reasoning models. Its bare
+    # OpenAI model lookup retains the model-specific capability restrictions.
+    if normalized.startswith("openai/"):
+        normalized = normalized.removeprefix("openai/")
 
     params = get_supported_openai_params(
         model=normalized,
@@ -181,9 +186,7 @@ def _supports_prompt_cache_key_param(
     )
 
 
-REASONING_EFFORT_MODEL_OVERRIDES = {
-    "kimi-k3": "moonshot/kimi-k3",
-}
+REASONING_EFFORT_MODEL_OVERRIDES: dict[str, str] = {}
 
 
 EXTENDED_THINKING_MODELS: list[str] = [

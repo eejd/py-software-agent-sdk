@@ -36,7 +36,11 @@ def _response(usage, cost=PROXY_COST):
 @pytest.fixture
 def exporter(monkeypatch):
     exp = InMemorySpanExporter()
-    provider = TracerProvider()
+    # Keep the process-wide SDK disabled, but enable this isolated in-memory
+    # provider while it is constructed; it has no network exporter.
+    with monkeypatch.context() as tracing:
+        tracing.delenv("OTEL_SDK_DISABLED", raising=False)
+        provider = TracerProvider()
     provider.add_span_processor(SimpleSpanProcessor(exp))
     tracer = provider.get_tracer("test")
 

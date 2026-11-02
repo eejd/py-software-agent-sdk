@@ -1,5 +1,6 @@
 """MCP2 wire and credential-boundary regression tests."""
 
+import asyncio
 import socket
 import sys
 import threading
@@ -10,6 +11,7 @@ from pathlib import Path
 import pytest
 import uvicorn
 from fastmcp import FastMCP
+from fastmcp.server.dependencies import get_context
 
 from openhands.sdk.mcp import create_mcp_tools
 from openhands.sdk.mcp.config import coerce_mcp_config
@@ -21,6 +23,27 @@ server = FastMCP("addition")
 
 @server.tool()
 def add(a: int, b: int) -> int:
+    return a + b
+
+cancelled = threading.Event()
+started = threading.Event()
+
+
+@server.tool()
+async def slow_progress() -> str:
+    started.set()
+    try:
+        await get_context().report_progress(1, 2, "working")
+        await asyncio.sleep(30)
+        return "unexpected"
+    except asyncio.CancelledError:
+        cancelled.set()
+        raise
+
+
+@server.tool()
+async def progress_add(a: int, b: int) -> int:
+    await get_context().report_progress(1, 2, "adding")
     return a + b
 
 
@@ -51,6 +74,39 @@ def test_streamable_http_add():
             time.sleep(0.01)
         assert uv.started
         _call_add({"transport": "http", "url": f"http://127.0.0.1:{port}/mcp"})
+        config = coerce_mcp_config(
+            {"addition": {"transport": "http", "url": f"http://127.0.0.1:{port}/mcp"}}
+        )
+        with create_mcp_tools(config, timeout=10) as client:
+            async def exercise():
+                progress = []
+                working = asyncio.Event()
+
+                async def on_progress(value, total, message):
+                    progress.append((value, total, message))
+                    if message == "working":
+                        working.set()
+
+                result = await client.call_tool_mcp(
+                    "progress_add", {"a": 19, "b": 23}, progress_handler=on_progress
+                )
+                assert any("42" in block.text for block in result.content)
+                assert progress == [(1, 2, "adding")]
+
+                started.clear()
+                cancelled.clear()
+                task = asyncio.create_task(
+                    client.call_tool_mcp("slow_progress", {}, progress_handler=on_progress)
+                )
+                assert await asyncio.to_thread(started.wait, 5)
+                await asyncio.wait_for(working.wait(), 5)
+                task.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await task
+                assert await asyncio.to_thread(cancelled.wait, 5)
+                assert (1, 2, "working") in progress
+
+            client.call_async_from_sync(exercise, timeout=15)
     finally:
         uv.should_exit = True
         thread.join(timeout=5)

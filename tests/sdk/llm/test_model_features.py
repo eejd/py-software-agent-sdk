@@ -62,9 +62,8 @@ def test_model_matches(name, pattern, expected):
         ("gemini-1.5-pro", False),
         # DeepSeek Reasoner
         ("deepseek/deepseek-reasoner", True),
-        # Moonshot Kimi thinking models expose reasoning content but do not
-        # accept the reasoning_effort parameter.
-        ("moonshot/kimi-k2.5", False),
+        # LiteLLM now translates reasoning_effort for Kimi K2.5.
+        ("moonshot/kimi-k2.5", True),
         ("moonshot/kimi-k2-thinking", False),
         ("litellm_proxy/moonshot/kimi-k2-thinking", False),
         # Eval LiteLLM proxy wrapper should not affect capability detection.
