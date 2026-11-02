@@ -85,6 +85,20 @@ class MCPOAuth(OAuth):
     includes and which strict servers reject.
     """
 
+    def _bind(self, mcp_url: str) -> None:
+        already_bound = self._bound
+        super()._bind(mcp_url)
+        if (
+            not already_bound
+            and not self._client_id
+            and not self._client_secret
+            and "token_endpoint_auth_method"
+            not in (self._additional_client_metadata or {})
+        ):
+            # FastMCP defaults dynamic registrations to "none". Leave the
+            # method unspecified until discovery can select a supported one.
+            self.context.client_metadata.token_endpoint_auth_method = None
+
     async def async_auth_flow(
         self, request: httpx.Request
     ) -> AsyncGenerator[httpx.Request, httpx.Response]:

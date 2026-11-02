@@ -418,7 +418,12 @@ def create_mcp_tools(
         client=None,  # type: ignore[arg-type]
         on_tools_changed=on_tools_changed,
     )
-    client = MCPClient(config, log_handler=log_handler, message_handler=handler)
+    # The modern stateless protocol has no unauthenticated HTTP session and
+    # cannot deliver session-scoped notifications. Preserve the SDK's
+    # persistent-session contract using MCP's initialize handshake.
+    client = MCPClient(
+        config, log_handler=log_handler, message_handler=handler, mode="legacy"
+    )
     handler._client = client
     client._tools_reconciled_callback = on_tools_reconciled
 

@@ -818,7 +818,7 @@ def test_mcp_tool_reconnects_after_http_error():
             second = tool.executor(action)
 
             assert first.is_error
-            assert "504 Gateway Timeout" in first.text
+            assert "Error calling MCP tool ping" in first.text
             assert not second.is_error
             assert "pong" in second.text
     finally:

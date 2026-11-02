@@ -12,9 +12,10 @@ from collections.abc import Callable
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-import httpx
+import httpx2 as httpx
 import pytest
 from key_value.aio.stores.memory import MemoryStore
+from mcp.shared.auth import AuthorizationCodeResult
 
 from openhands.sdk.mcp.exceptions import MCPError
 from openhands.sdk.mcp.oauth import MCPOAuth, NonInteractiveMCPOAuth
@@ -139,8 +140,8 @@ def _consent(oauth: MCPOAuth) -> None:
     async def redirect(authorization_url: str) -> None:
         states.append(parse_qs(urlparse(authorization_url).query)["state"][0])
 
-    async def callback() -> tuple[str, str | None]:
-        return "auth-code", states[-1]
+    async def callback() -> AuthorizationCodeResult:
+        return AuthorizationCodeResult(code="auth-code", state=states[-1])
 
     oauth.context.redirect_handler = redirect
     oauth.context.callback_handler = callback
